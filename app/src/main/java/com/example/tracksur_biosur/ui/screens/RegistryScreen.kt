@@ -4,7 +4,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -18,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.tracksur_biosur.domain.model.FieldReport
@@ -61,7 +61,7 @@ fun RegistryScreen(
         },
         bottomBar = {
             NavigationBar(
-                containerColor = Color(0xFF2D3B2D), // Verde oscuro elegante según boceto
+                containerColor = Color(0xFF2D3B2D),
                 contentColor = Color.White
             ) {
                 NavigationBarItem(
@@ -80,8 +80,11 @@ fun RegistryScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick = onNavigateToCreate,
-                containerColor = Color(0xFFD4E157), // Tono lima/verde claro sutil
+                onClick = {
+                    viewModel.prepareNewReport() // Limpia el formulario para un nuevo reporte desde cero
+                    onNavigateToCreate()
+                },
+                containerColor = Color(0xFFD4E157),
                 contentColor = Color(0xFF1B5E20),
                 shape = RoundedCornerShape(16.dp),
                 icon = { Icon(Icons.Default.Add, contentDescription = "Nuevo") },
@@ -105,7 +108,7 @@ fun RegistryScreen(
                     title = "Borradores (${drafts.size})",
                     isExpanded = isDraftsExpanded,
                     onToggle = { isDraftsExpanded = !isDraftsExpanded },
-                    headerColor = Color(0xFFFFF3E0) // Fondo naranja sutil
+                    headerColor = Color(0xFFFFF3E0)
                 )
             }
 
@@ -116,7 +119,14 @@ fun RegistryScreen(
                             EmptyStateMessage("No hay borradores pendientes.")
                         } else {
                             drafts.forEach { report ->
-                                ModernReportCard(report = report, isDraft = true)
+                                ModernReportCard(
+                                    report = report,
+                                    isDraft = true,
+                                    onClick = {
+                                        viewModel.loadDraftForEdit(report) // Carga los datos del borrador en el ViewModel
+                                        onNavigateToCreate()               // Abre el formulario de edición
+                                    }
+                                )
                             }
                         }
                     }
@@ -129,7 +139,7 @@ fun RegistryScreen(
                     title = "Antecedentes entregados (${submitted.size})",
                     isExpanded = isSubmittedExpanded,
                     onToggle = { isSubmittedExpanded = !isSubmittedExpanded },
-                    headerColor = Color(0xFFE8F5E9) // Fondo verde sutil
+                    headerColor = Color(0xFFE8F5E9)
                 )
             }
 
@@ -140,14 +150,21 @@ fun RegistryScreen(
                             EmptyStateMessage("No hay antecedentes registrados.")
                         } else {
                             submitted.forEach { report ->
-                                ModernReportCard(report = report, isDraft = false)
+                                ModernReportCard(
+                                    report = report,
+                                    isDraft = false,
+                                    onClick = {
+                                        viewModel.loadDraftForEdit(report)
+                                        onNavigateToCreate()
+                                    }
+                                )
                             }
                         }
                     }
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(80.dp)) } // Espacio para no solapar el FAB
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 }
@@ -191,16 +208,20 @@ private fun SectionHeader(
 @Composable
 private fun ModernReportCard(
     report: FieldReport,
-    isDraft: Boolean
+    isDraft: Boolean,
+    onClick: () -> Unit
 ) {
     val cardBg = if (isDraft) Color(0xFFFFE0B2) else Color(0xFFC8E6C9)
     val badgeColor = if (isDraft) Color(0xFFE65100) else Color(0xFF2E7D32)
+    val badgeBg = if (isDraft) Color(0xFFFFCC80) else Color(0xFFA5D6A7)
     val formattedDate = remember(report.timestamp) {
         SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date(report.timestamp))
     }
 
     ElevatedCard(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.elevatedCardColors(containerColor = cardBg),
         elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
@@ -211,26 +232,42 @@ private fun ModernReportCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Título delimitado sin invadir la etiqueta
                 Text(
                     text = "- ${report.categoria.ifBlank { "Sin Asunto" }}",
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A237E)
+                    ),
+                    modifier = Modifier.weight(1f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Etiqueta en pastilla independiente
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = badgeBg
+                ) {
+                    Text(
+                        text = if (isDraft) "Borrador" else "Entregado",
+                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                        color = badgeColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        maxLines = 1
                     )
-                )
-                Text(
-                    text = if (isDraft) "Borrador" else "Entregado",
-                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                    color = badgeColor
-                )
+                }
             }
 
             if (report.descripcion.isNotBlank()) {
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = report.descripcion,
                     style = MaterialTheme.typography.bodyMedium.copy(color = Color(0xFF37474F)),
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 

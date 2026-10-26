@@ -27,7 +27,14 @@ fun CreateReportScreen(
 
     // Estado del menú desplegable de categorías
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
-    val categories = listOf("Inspección Biológica", "Muestreo de Agua", "Control de Plagas", "Auditoría Ambiental", "Otro")
+    val categories = listOf(
+        "Mantención / Limpieza de Baños Químicos",
+        "Mantención de Sistemas Sanitarios",
+        "Disposición / Retiro de Aguas Servidas",
+        "Gestión y Transporte de Residuos",
+        "Inspección de Infraestructura Sanitaria",
+        "Otro"
+    )
 
     // Comprueba si el usuario ha escrito algo antes de salir
     val isFormDirty = uiState.category.isNotBlank() || uiState.description.isNotBlank() || uiState.operatorRun.isNotBlank()
@@ -148,6 +155,7 @@ fun CreateReportScreen(
 
             // 4. Barra de Acciones Inferior (Escaner e Insertar)
             // 4. Barra de Acciones Inferior (Escáner e Insertar)
+            // 4. Barra de Acciones Inferior (Escáner, Borrador e Insertar)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -155,7 +163,7 @@ fun CreateReportScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Botón Escáner (solo texto nativo)
+                // Botón Escáner
                 OutlinedButton(
                     onClick = { /* Lógica futura para abrir cámara/OCR */ },
                     shape = RoundedCornerShape(12.dp),
@@ -177,16 +185,23 @@ fun CreateReportScreen(
                     Text("Borrador")
                 }
 
-                // Botón Firmar / Insertar
+                // <-- AQUÍ VA EL BLOQUE MEJORADO:
+                val isFormValid = uiState.category.isNotBlank() &&
+                        uiState.description.isNotBlank() &&
+                        uiState.isRunValid &&
+                        uiState.operatorRun.isNotBlank()
+
                 Button(
                     onClick = {
                         viewModel.saveReport(isDraft = false)
-                        if (uiState.isRunValid && uiState.operatorRun.isNotBlank()) {
-                            onNavigateBack()
-                        }
+                        onNavigateBack()
                     },
+                    enabled = isFormValid, // Se deshabilita si faltan datos por rellenar
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2E7D32),
+                        disabledContainerColor = Color(0xFFA5D6A7)
+                    ),
                     modifier = Modifier.weight(1.2f)
                 ) {
                     Icon(Icons.Default.Check, contentDescription = null)

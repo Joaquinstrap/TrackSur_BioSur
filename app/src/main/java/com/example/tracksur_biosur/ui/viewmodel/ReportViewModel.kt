@@ -19,6 +19,9 @@ class ReportViewModel(
     private val _uiState = MutableStateFlow(ReportUiState())
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
+    // ID del borrador en edición (0 si es un reporte nuevo desde cero)
+    private var editingReportId: Int = 0
+
     init {
         loadReports()
     }
@@ -66,9 +69,44 @@ class ReportViewModel(
         }
     }
 
+    // 1. Cargar borrador existente en el formulario para editarlo
+    fun loadDraftForEdit(report: FieldReport) {
+        editingReportId = report.id
+        _uiState.update { currentState ->
+            currentState.copy(
+                category = report.categoria,
+                description = report.descripcion,
+                operatorRun = report.operatorRun ?: "",
+                photoPath = report.photoPath,
+                extractedTextOcr = report.extractedTextOcr,
+                isRunValid = true,
+                runErrorMessage = null
+            )
+        }
+    }
+
+    // 2. Limpiar el formulario para crear un reporte nuevo desde cero
+    fun prepareNewReport() {
+        editingReportId = 0
+        _uiState.update { currentState ->
+            currentState.copy(
+                category = "",
+                description = "",
+                operatorRun = "",
+                photoPath = null,
+                extractedTextOcr = null,
+                isRunValid = true,
+                runErrorMessage = null,
+                isSaveSuccess = false
+            )
+        }
+    }
+
+    // 3. Función unificada para guardar (Borrador u Oficial)
     fun saveReport(isDraft: Boolean) {
         val currentState = _uiState.value
 
+        // Validación si se intenta firmar un reporte oficial
         if (!isDraft && (!currentState.isRunValid || currentState.operatorRun.isBlank())) {
             _uiState.update {
                 it.copy(
@@ -83,28 +121,18 @@ class ReportViewModel(
             _uiState.update { it.copy(isLoading = true) }
 
             val report = FieldReport(
+                id = editingReportId, // Conserva el ID existente para actualizar, o 0 para crear uno nuevo
                 categoria = currentState.category,
                 descripcion = currentState.description,
                 timestamp = System.currentTimeMillis(),
                 photoPath = currentState.photoPath,
                 extractedTextOcr = currentState.extractedTextOcr,
-                operatorRun = currentState.operatorRun,
+                operatorRun = currentState.operatorRun.ifBlank { null },
                 isDraft = isDraft
             )
 
             repository.saveReport(report)
-
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    isSaveSuccess = true,
-                    category = "",
-                    description = "",
-                    operatorRun = "",
-                    photoPath = null,
-                    extractedTextOcr = null
-                )
-            }
+            prepareNewReport()
         }
     }
 }
