@@ -4,7 +4,7 @@ package com.example.tracksur_biosur.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-@Entity(tableName = "field_report")
+@Entity(tableName = "field_reports")
 data class FieldReportEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Int = 0,
