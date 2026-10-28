@@ -56,6 +56,8 @@ class ReportViewModel(
             return
         }
 
+
+
         val result = validateRunUseCase.execute(run)
         val isValid = result is ValidateRunUseCase.Result.Success
         val errorMessage = (result as? ValidateRunUseCase.Result.Error)?.message
@@ -68,6 +70,15 @@ class ReportViewModel(
             )
         }
     }
+
+    fun onPhotoCaptured(path:String){
+        _uiState.update{currentState ->
+            currentState.copy(photoPath = path)
+        }
+    }
+
+
+
 
     // 1. Cargar borrador existente en el formulario para editarlo
     fun loadDraftForEdit(report: FieldReport) {

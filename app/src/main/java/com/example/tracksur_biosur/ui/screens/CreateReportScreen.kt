@@ -14,6 +14,26 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
+
+import android.net.Uri
+import android.os.Environment
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
+import java.io.File
+import android.content.pm.PackageManager
+import androidx.core.content.ContextCompat
+import android.Manifest
+
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+
+import android.content.Intent
+import android.provider.MediaStore
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateReportScreen(
@@ -27,6 +47,23 @@ fun CreateReportScreen(
 
     // Estado del menú desplegable de categorías
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
+
+    //Guarda la ruta del archivo temporal para llamar a la camara
+    //De esta variable solo puede existir una en el codigo
+    var tempPhotoPath by remember { mutableStateOf<String?>(null) }
+
+
+
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicture()
+    ){isSuccess ->
+        if(isSuccess && tempPhotoPath != null) {
+            viewModel.onPhotoCaptured(tempPhotoPath!!)
+        }
+    }
+
+
     val categories = listOf(
         "Mantención / Limpieza de Baños Químicos",
         "Mantención de Sistemas Sanitarios",
@@ -52,20 +89,87 @@ fun CreateReportScreen(
         handleBackPress()
     }
 
+    val context = LocalContext.current
+
+
+
+
+
+
+
+    fun launchCamera() {
+        try {
+            // 1. Obtener la carpeta de almacenamiento e integrar verificación de existencia
+            val storageDir = context.getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+            if (storageDir != null && !storageDir.exists()) {
+                storageDir.mkdirs()
+            }
+
+            // 2. Crear el archivo temporal .jpg
+            val photoFile = File.createTempFile(
+                "biosur_${System.currentTimeMillis()}_",
+                ".jpg",
+                storageDir
+            )
+
+            // 3. Generar la URI del FileProvider usando la ID exacta de la app
+            val authority = "${context.applicationContext.packageName}.fileprovider"
+            val photoUri: Uri = FileProvider.getUriForFile(
+                context,
+                authority,
+                photoFile
+            )
+
+            // 4. Guardar la ruta local e invocar la cámara nativa
+            tempPhotoPath = photoFile.absolutePath
+            cameraLauncher.launch(photoUri)
+
+        } catch (e: Exception) {
+            // El try-catch evita que la app colapse si ocurre algún problema de permisos o archivo
+            android.util.Log.e("CAMERA_ERROR", "Error al iniciar la cámara: ${e.message}", e)
+        }
+    }
+
+    // Lanzador para pedir el permiso de cámara al usuario
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            launchCamera()
+        } else {
+            android.util.Log.e("CAMERA_TEST", "El usuario denegó el permiso de cámara")
+        }
+    }
+
+    // Función que verifica si ya existe el permiso antes de abrir la cámara
+    fun checkAndLaunchCamera() {
+        val permissionCheck = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.CAMERA
+        )
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            launchCamera()
+        } else {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
                     Text(
                         text = "A que categoría pertenecen sus antecedentes",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold)
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        color = Color.Black
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = { handleBackPress() }) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Volver"
+                            contentDescription = "Volver",
+                            tint = Color.Black
                         )
                     }
                 },
@@ -95,7 +199,11 @@ fun CreateReportScreen(
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryDropdownExpanded) },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedContainerColor = Color.White
+                        ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .menuAnchor()
@@ -128,7 +236,11 @@ fun CreateReportScreen(
                         .heightIn(min = 150.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = Color(0xFFFFF3E0), // Naranja pastel suave similar al boceto
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedPlaceholderColor = Color.Gray,
+                        unfocusedPlaceholderColor = Color.Gray,
+                        focusedContainerColor = Color(0xFFFFF3E0),
                         unfocusedContainerColor = Color(0xFFFFF8E1),
                         focusedBorderColor = Color(0xFFFFB74D),
                         unfocusedBorderColor = Color(0xFFFFE0B2)
@@ -139,14 +251,27 @@ fun CreateReportScreen(
                 OutlinedTextField(
                     value = uiState.operatorRun,
                     onValueChange = { viewModel.onOperatorRunChanged(it) },
-                    label = { Text("RUN Firma Operador") },
-                    placeholder = { Text("Ej: 12345678-K") },
+                    label = { Text("RUN Firma Operador", color = Color.DarkGray) },
+                    placeholder = { Text("Ej: 12345678-K", color= Color.DarkGray) },
                     isError = !uiState.isRunValid,
                     supportingText = {
                         uiState.runErrorMessage?.let { msg ->
                             Text(text = msg, color = MaterialTheme.colorScheme.error)
                         }
                     },
+                    textStyle = LocalTextStyle.current.copy(color = Color.Black),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedLabelColor = Color(0xFF2E7D32),
+                        unfocusedLabelColor = Color.DarkGray,
+                        focusedPlaceholderColor = Color.Gray,
+                        unfocusedPlaceholderColor = Color.Gray
+                    ),
+
+
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -165,12 +290,12 @@ fun CreateReportScreen(
             ) {
                 // Botón Escáner
                 OutlinedButton(
-                    onClick = { /* Lógica futura para abrir cámara/OCR */ },
+                    onClick = {checkAndLaunchCamera() },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32))
                 ) {
-                    Text("Escáner")
+                    Text(if(uiState.photoPath != null) "Foto Adjunta" else "Escáner")
                 }
 
                 // Botón Guardar Borrador
