@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.example.tracksur_biosur.domain.model.FieldReport
 import com.example.tracksur_biosur.ui.viewmodel.ReportViewModel
 import java.text.SimpleDateFormat
+import androidx.compose.material.icons.filled.Delete
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,6 +42,9 @@ fun RegistryScreen(
     // Control de apertura/cierre de acordeones
     var isDraftsExpanded by remember { mutableStateOf(true) }
     var isSubmittedExpanded by remember { mutableStateOf(true) }
+
+    // Guarda temporalmente el reporte que el usuario presione para eliminar
+    var reportToDelete by remember { mutableStateOf<FieldReport?>(null) }
 
     Scaffold(
         topBar = {
@@ -125,7 +129,8 @@ fun RegistryScreen(
                                     onClick = {
                                         viewModel.loadDraftForEdit(report) // Carga los datos del borrador en el ViewModel
                                         onNavigateToCreate()               // Abre el formulario de edición
-                                    }
+                                    },
+                                    onDeleteClick = {reportToDelete = report}
                                 )
                             }
                         }
@@ -156,7 +161,8 @@ fun RegistryScreen(
                                     onClick = {
                                         viewModel.loadDraftForEdit(report)
                                         onNavigateToCreate()
-                                    }
+                                    },
+                                    onDeleteClick = {reportToDelete = report}
                                 )
                             }
                         }
@@ -166,6 +172,32 @@ fun RegistryScreen(
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
+    }
+    reportToDelete?.let { report ->
+        AlertDialog(
+            onDismissRequest = { reportToDelete = null },
+            title = { Text("¿Eliminar registro?",color = Color.Black,
+                fontWeight = FontWeight.Bold) },
+            text = { Text("¿Deseas eliminar permanentemente \"${report.categoria.ifBlank { "Sin Asunto" }}\"?",
+                ) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteReport(report)
+                        reportToDelete = null
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { reportToDelete = null }) {
+                    Text("Cancelar", color = Color.Gray)
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = Color.White
+        )
     }
 }
 
@@ -209,7 +241,8 @@ private fun SectionHeader(
 private fun ModernReportCard(
     report: FieldReport,
     isDraft: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     val cardBg = if (isDraft) Color(0xFFFFE0B2) else Color(0xFFC8E6C9)
     val badgeColor = if (isDraft) Color(0xFFE65100) else Color(0xFF2E7D32)
@@ -272,13 +305,33 @@ private fun ModernReportCard(
             }
 
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = formattedDate,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = 11.sp,
-                    color = Color(0xFF616161)
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = formattedDate,
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 11.sp,
+                        color = Color(0xFF616161)
+                    )
                 )
-            )
+                Spacer(modifier = Modifier.width(4.dp))
+
+                IconButton(
+                    onClick = onDeleteClick,
+                    modifier = Modifier.size(32.dp)
+                ){
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar registro",
+                        tint = Color(0xFFD32F2F)
+                    )
+                }
+
+            }
         }
     }
 }

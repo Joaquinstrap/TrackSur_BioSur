@@ -146,4 +146,12 @@ class ReportViewModel(
             prepareNewReport()
         }
     }
+
+    // Elimina cualquier reporte seleccionado desde la lista principal
+    fun deleteReport(report: FieldReport) {
+        viewModelScope.launch {
+            repository.deleteReport(report)
+        }
+    }
+
 }

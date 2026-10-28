@@ -33,6 +33,8 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 import android.content.Intent
 import android.provider.MediaStore
+import androidx.compose.ui.unit.sp
+import com.example.tracksur_biosur.util.isInternetAvailable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,6 +46,9 @@ fun CreateReportScreen(
 
     // Estado local para el diálogo de confirmación al salir
     var showExitDialog by remember { mutableStateOf(false) }
+
+    // Estado local para la alerta de falta de señal
+    var showNoInternetDialog by remember { mutableStateOf(false) }
 
     // Estado del menú desplegable de categorías
     var isCategoryDropdownExpanded by remember { mutableStateOf(false) }
@@ -97,11 +102,10 @@ fun CreateReportScreen(
 
 
     val categories = listOf(
-        "Mantención / Limpieza de Baños Químicos",
-        "Mantención de Sistemas Sanitarios",
-        "Disposición / Retiro de Aguas Servidas",
-        "Gestión y Transporte de Residuos",
-        "Inspección de Infraestructura Sanitaria",
+        "Mantención / Entrega y/o retiro  de Baños Químicos",
+        "Mantención en plantas elevadoras",
+        "Tratamiento de Aguas Servidas",
+        "Inspecciónes de ductos",
         "Otro"
     )
 
@@ -191,9 +195,11 @@ fun CreateReportScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "A que categoría pertenecen sus antecedentes",
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                        text = "Formulario de registro de antecedentes",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp),
                         color = Color.Black
+
                     )
                 },
                 navigationIcon = {
@@ -317,7 +323,7 @@ fun CreateReportScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Botón Escáner
@@ -325,9 +331,12 @@ fun CreateReportScreen(
                     onClick = {checkAndLaunchCamera() },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32))
                 ) {
-                    Text(if(uiState.photoPath != null) "Foto Adjunta" else "Escáner")
+                    Text(if(uiState.photoPath != null) "Foto Adjunta" else "Escáner",
+                        fontSize = 13.sp,
+                        maxLines = 1)
                 }
 
                 // Botón Guardar Borrador
@@ -350,21 +359,40 @@ fun CreateReportScreen(
 
                 Button(
                     onClick = {
-                        viewModel.saveReport(isDraft = false)
-                        onNavigateBack()
+                        // Evalúa si el teléfono tiene señal de internet
+                        if (isInternetAvailable(context)) {
+                            viewModel.saveReport(isDraft = false)
+                            onNavigateBack()
+                        } else {
+                            // Si está offline, despliega la alerta
+                            showNoInternetDialog = true
+                        }
                     },
-                    enabled = isFormValid, // Se deshabilita si faltan datos por rellenar
+                    enabled = isFormValid,
                     shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF2E7D32),
-                        disabledContainerColor = Color(0xFFA5D6A7)
+                        contentColor = Color.White,
+                        disabledContainerColor = Color(0xFFE0E0E0),
+                        disabledContentColor = Color(0xFF9E9E9E)
                     ),
-                    modifier = Modifier.weight(1.2f)
+                    modifier = Modifier.weight(1.1f)
                 ) {
-                    Icon(Icons.Default.Check, contentDescription = null)
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Insertar")
+                    Text(
+                        text = "Insertar",
+                        fontSize = 13.sp,
+                        maxLines = 1
+                    )
                 }
+
+
             }
         }
     }
@@ -373,8 +401,12 @@ fun CreateReportScreen(
     if (showExitDialog) {
         AlertDialog(
             onDismissRequest = { showExitDialog = false },
-            title = { Text("¿Desea salir?") },
-            text = { Text("Lo que no haya guardado se borrará...") },
+            title = { Text("¿Desea salir?",
+                color = Color.Black,
+                fontWeight = FontWeight.Bold) },
+            text = { Text("Lo que no haya guardado se borrará...",
+                color = Color.Black
+                ) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -382,16 +414,63 @@ fun CreateReportScreen(
                         onNavigateBack()
                     }
                 ) {
-                    Text("Sí, salir", color = MaterialTheme.colorScheme.error)
+                    Text("Sí, salir", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showExitDialog = false }) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = Color.DarkGray)
                 }
             },
             shape = RoundedCornerShape(16.dp),
             containerColor = Color.White
         )
     }
+
+    // Diálogo emergente cuando el usuario no tiene conexión
+    if (showNoInternetDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoInternetDialog = false },
+            title = {
+                Text(
+                    text = "Sin conexión a Internet",
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "No tienes señal en este momento. El registro se guardará automáticamente como BORRADOR para que puedas enviarlo al encargado cuando recuperes conexión.",
+                    color = Color(0xFF37474F)
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showNoInternetDialog = false
+                        viewModel.saveReport(isDraft = true) // Guarda localmente en Room como borrador
+                        onNavigateBack()
+                    }
+                ) {
+                    Text("Guardar Borrador", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showNoInternetDialog = false }) {
+                    Text("Cancelar", color = Color.DarkGray)
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            containerColor = Color.White
+        )
+    }
+
+
+
 }
+
+
+
+
+
+
