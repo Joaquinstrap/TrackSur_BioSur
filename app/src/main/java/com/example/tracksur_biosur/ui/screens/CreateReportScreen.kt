@@ -53,13 +53,45 @@ fun CreateReportScreen(
     var tempPhotoPath by remember { mutableStateOf<String?>(null) }
 
 
-
-
+    val textRecognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+    val context = LocalContext.current
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ){isSuccess ->
         if(isSuccess && tempPhotoPath != null) {
             viewModel.onPhotoCaptured(tempPhotoPath!!)
+
+            // --- PROCESAMIENTO OCR (Lectura de texto) ---
+            try {
+                val imageFile = File(tempPhotoPath!!)
+                val imageUri = Uri.fromFile(imageFile)
+                val inputImage = InputImage.fromFilePath(context, imageUri)
+
+                textRecognizer.process(inputImage)
+                    .addOnSuccessListener { visionText ->
+                        val textEscaneado = visionText.text
+                        if (textEscaneado.isNotBlank()) {
+                            val descripcionActual = viewModel.uiState.value.description
+                            val nuevaDescripcion = if (descripcionActual.isBlank()) {
+                                textEscaneado
+                            } else {
+                                "$descripcionActual\n\n--- Texto Escaneado ---\n$textEscaneado"
+                            }
+
+                            // Escribe automáticamente en la casilla de Descripción
+                            viewModel.onDescriptionChanged(nuevaDescripcion)
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        android.util.Log.e("OCR_ERROR", "Error al procesar la imagen: ${e.message}")
+                    }
+            } catch (e: Exception) {
+                android.util.Log.e("OCR_ERROR", "Error cargando archivo de imagen: ${e.message}")
+            }
+
+
+
+
         }
     }
 
@@ -89,7 +121,7 @@ fun CreateReportScreen(
         handleBackPress()
     }
 
-    val context = LocalContext.current
+
 
 
 
