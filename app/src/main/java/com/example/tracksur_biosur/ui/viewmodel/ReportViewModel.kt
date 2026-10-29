@@ -73,22 +73,28 @@ class ReportViewModel(
 
     fun onPhotoCaptured(path:String){
         _uiState.update{currentState ->
-            currentState.copy(photoPath = path)
+            currentState.copy(photoPath = currentState.photoPath + path)
         }
     }
 
+    fun onPhotoRemoved(path: String) {
+        _uiState.update { currentState ->
+            currentState.copy(photoPath = currentState.photoPath - path)
+        }
+    }
 
 
 
     // 1. Cargar borrador existente en el formulario para editarlo
     fun loadDraftForEdit(report: FieldReport) {
         editingReportId = report.id
+        val path = report.photoPath?.split("|")?.filter { it.isNotBlank() } ?: emptyList()
         _uiState.update { currentState ->
             currentState.copy(
                 category = report.categoria,
                 description = report.descripcion,
                 operatorRun = report.operatorRun ?: "",
-                photoPath = report.photoPath,
+                photoPath = path,
                 extractedTextOcr = report.extractedTextOcr,
                 isRunValid = true,
                 runErrorMessage = null
@@ -104,7 +110,7 @@ class ReportViewModel(
                 category = "",
                 description = "",
                 operatorRun = "",
-                photoPath = null,
+                photoPath = emptyList(),
                 extractedTextOcr = null,
                 isRunValid = true,
                 runErrorMessage = null,
@@ -131,12 +137,14 @@ class ReportViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
+            val joinedPhotos = currentState.photoPath.joinToString("|").ifBlank { null }
+
             val report = FieldReport(
                 id = editingReportId, // Conserva el ID existente para actualizar, o 0 para crear uno nuevo
                 categoria = currentState.category,
                 descripcion = currentState.description,
                 timestamp = System.currentTimeMillis(),
-                photoPath = currentState.photoPath,
+                photoPath = joinedPhotos,
                 extractedTextOcr = currentState.extractedTextOcr,
                 operatorRun = currentState.operatorRun.ifBlank { null },
                 isDraft = isDraft

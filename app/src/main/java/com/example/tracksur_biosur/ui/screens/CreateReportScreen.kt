@@ -13,6 +13,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
+import androidx.compose.foundation.lazy.items  // <--- ESTE CORRIGE LOS 3 ERRORES DE TIPO DE UN SOLO GOLPE
+import androidx.compose.material.icons.filled.Close
+
+
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,9 +37,19 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.provider.MediaStore
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
 import com.example.tracksur_biosur.util.isInternetAvailable
+
+
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,48 +72,70 @@ fun CreateReportScreen(
     //De esta variable solo puede existir una en el codigo
     var tempPhotoPath by remember { mutableStateOf<String?>(null) }
 
+    var isOcrMode by remember { mutableStateOf(false) }
 
     val textRecognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
     val context = LocalContext.current
+
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
-    ){isSuccess ->
-        if(isSuccess && tempPhotoPath != null) {
-            viewModel.onPhotoCaptured(tempPhotoPath!!)
+    ) { isSuccess ->
+        if (isSuccess && tempPhotoPath != null) {
+            if (isOcrMode) {
+                // --- MODO ESCÁNER: SOLO extrae texto para la descripción ---
+                try {
+                    val imageFile = File(tempPhotoPath!!)
+                    val imageUri = Uri.fromFile(imageFile)
+                    val inputImage = InputImage.fromFilePath(context, imageUri)
 
-            // --- PROCESAMIENTO OCR (Lectura de texto) ---
-            try {
-                val imageFile = File(tempPhotoPath!!)
-                val imageUri = Uri.fromFile(imageFile)
-                val inputImage = InputImage.fromFilePath(context, imageUri)
-
-                textRecognizer.process(inputImage)
-                    .addOnSuccessListener { visionText ->
-                        val textEscaneado = visionText.text
-                        if (textEscaneado.isNotBlank()) {
-                            val descripcionActual = viewModel.uiState.value.description
-                            val nuevaDescripcion = if (descripcionActual.isBlank()) {
-                                textEscaneado
-                            } else {
-                                "$descripcionActual\n\n--- Texto Escaneado ---\n$textEscaneado"
+                    textRecognizer.process(inputImage)
+                        .addOnSuccessListener { visionText ->
+                            val textEscaneado = visionText.text
+                            if (textEscaneado.isNotBlank()) {
+                                val descripcionActual = viewModel.uiState.value.description
+                                val nuevaDescripcion = if (descripcionActual.isBlank()) {
+                                    textEscaneado
+                                } else {
+                                    "$descripcionActual\n\n--- Texto Escaneado ---\n$textEscaneado"
+                                }
+                                viewModel.onDescriptionChanged(nuevaDescripcion)
                             }
-
-                            // Escribe automáticamente en la casilla de Descripción
-                            viewModel.onDescriptionChanged(nuevaDescripcion)
                         }
-                    }
-                    .addOnFailureListener { e ->
-                        android.util.Log.e("OCR_ERROR", "Error al procesar la imagen: ${e.message}")
-                    }
-            } catch (e: Exception) {
-                android.util.Log.e("OCR_ERROR", "Error cargando archivo de imagen: ${e.message}")
+                        .addOnFailureListener { e ->
+                            android.util.Log.e("OCR_ERROR", "Error al procesar: ${e.message}")
+                        }
+                } catch (e: Exception) {
+                    android.util.Log.e("OCR_ERROR", "Error cargando archivo: ${e.message}")
+                }
+            } else {
+                // --- MODO RESPALDO: SOLO guarda la foto en la lista de imágenes ---
+                viewModel.onPhotoCaptured(tempPhotoPath!!)
             }
-
-
-
-
         }
     }
+
+    val gallerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetMultipleContents()
+    ){ uri : List<Uri> ->
+        uri.forEach{uri ->
+            try{
+                val inputStream = context. contentResolver.openInputStream(uri)
+                val file = File(
+                    context.getExternalFilesDir(Environment.DIRECTORY_PICTURES),
+                    "biosur_galeria_${System.currentTimeMillis()}_${(100..999).random()}.jpg"
+                )
+                file.outputStream().use {output -> inputStream?.copyTo(output)}
+
+                viewModel.onPhotoCaptured(file.absolutePath)
+            } catch (e:Exception){
+                android.util.Log.e("GALLERY_ERROR","Error al cargar desde galeria: ${e.message}")
+            }
+
+        }
+
+    }
+
+
 
 
     val categories = listOf(
@@ -127,11 +164,6 @@ fun CreateReportScreen(
     BackHandler {
         handleBackPress()
     }
-
-
-
-
-
 
 
 
@@ -169,6 +201,12 @@ fun CreateReportScreen(
         }
     }
 
+
+
+
+
+
+
     // Lanzador para pedir el permiso de cámara al usuario
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -192,6 +230,18 @@ fun CreateReportScreen(
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
 
     Scaffold(
         topBar = {
@@ -274,7 +324,7 @@ fun CreateReportScreen(
                     placeholder = { Text("Ingrese información...") },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 150.dp),
+                        .height(150.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedTextColor = Color.Black,
@@ -317,10 +367,97 @@ fun CreateReportScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ){
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ){
+                        Text(
+                            text = "Respaldo de Terreno (${uiState.photoPath.size} adjuntas)",
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1C1D1F)
+                            )
+                        )
+
+                        if (uiState.photoPath.isNotEmpty()) {
+                            androidx.compose.foundation.lazy.LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                items(uiState.photoPath) { path ->
+                                    val bitmap = remember(path) {
+                                        try { BitmapFactory.decodeFile(path) } catch (e: Exception) { null }
+                                    }
+
+                                    bitmap?.let {
+                                        Box(modifier = Modifier.size(110.dp)) {
+                                            Image(
+                                                bitmap = it.asImageBitmap(),
+                                                contentDescription = "Foto de evidencia",
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(RoundedCornerShape(8.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
+
+                                            // Botón de eliminación individual por foto
+                                            IconButton(
+                                                onClick = { viewModel.onPhotoRemoved(path) },
+                                                modifier = Modifier
+                                                    .align(Alignment.TopEnd)
+                                                    .size(28.dp)
+                                                    .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Close,
+                                                    contentDescription = "Quitar foto",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+
+
+                        Row(
+
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ){
+                            OutlinedButton(
+                                onClick = {
+                                    isOcrMode = false
+                                    checkAndLaunchCamera()},
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ){
+                                Text("Foto Terreno", fontSize = 12.sp)
+                            }
+
+                            OutlinedButton(
+                                onClick = {gallerLauncher.launch("image/*")},
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(8.dp)
+                            ){
+                                Text("Adjuntar galeria", fontSize = 12.sp)
+                            }
+                        }
+                    }
+                }
+
+
             }
 
-            // 4. Barra de Acciones Inferior (Escaner e Insertar)
-            // 4. Barra de Acciones Inferior (Escáner e Insertar)
             // 4. Barra de Acciones Inferior (Escáner, Borrador e Insertar)
             Row(
                 modifier = Modifier
@@ -331,13 +468,15 @@ fun CreateReportScreen(
             ) {
                 // Botón Escáner
                 OutlinedButton(
-                    onClick = {checkAndLaunchCamera() },
+                    onClick = {
+                        isOcrMode = true
+                        checkAndLaunchCamera() },
                     shape = RoundedCornerShape(12.dp),
                     modifier = Modifier.weight(1f),
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32))
                 ) {
-                    Text(if(uiState.photoPath != null) "Foto Adjunta" else "Escáner",
+                    Text(if(uiState.photoPath != null) "Escaner" else "Foto Adjunta",
                         fontSize = 13.sp,
                         maxLines = 1)
                 }

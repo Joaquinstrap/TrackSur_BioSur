@@ -5,7 +5,7 @@ data class ReportUiState(
     val category: String = "",
     val description: String = "",
     val operatorRun: String = "",
-    val photoPath: String? = null,
+    val photoPath: List<String> = emptyList(),
     val extractedTextOcr: String? = null,
     val isRunValid: Boolean = true,
     val runErrorMessage: String? = null,

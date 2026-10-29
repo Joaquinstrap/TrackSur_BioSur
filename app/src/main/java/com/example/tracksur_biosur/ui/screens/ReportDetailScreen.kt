@@ -13,6 +13,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+
+
 import com.example.tracksur_biosur.domain.model.FieldReport
 import java.text.SimpleDateFormat
 import java.util.*
@@ -169,6 +178,55 @@ fun ReportDetailScreen(
                             color = Color(0xFF424242)
                         )
                     }
+
+                    val photoList = remember(report.photoPath) {
+                        report.photoPath?.split("|")?.filter {it.isNotEmpty() } ?:emptyList()
+                    }
+
+                    if (photoList.isNotEmpty()) {
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+
+                        Column {
+                            Text(
+                                text = "Respaldo de Terreno (${photoList.size} evidencias)",
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ){
+                                items(photoList){ path ->
+                                    val bitma = remember(path){
+                                        try{
+                                            BitmapFactory.decodeFile(path)
+                                        }catch (e: Exception){
+                                            null
+                                        }
+                                    }
+
+                                    bitma?.let{
+                                        Image(
+                                            bitmap = it.asImageBitmap(),
+                                            contentDescription = "Evidencia Fotografica",
+                                            modifier = Modifier
+                                                .size(120.dp)
+                                                .clip(RoundedCornerShape(8.dp)),
+                                            contentScale = ContentScale.Crop
+                                        )
+                                    }
+
+                                }
+                            }
+                        }
+                    }
+
+
+
                 }
             }
         }
