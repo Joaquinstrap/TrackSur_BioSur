@@ -10,7 +10,8 @@ data class ReportUiState(
     val isRunValid: Boolean = true,
     val runErrorMessage: String? = null,
     val isLoading: Boolean = false,
-    val isSaveSuccess: Boolean = false
+    val isSaveSuccess: Boolean = false,
+    val selectedReportForDetail: FieldReport? = null,
 
 
 )

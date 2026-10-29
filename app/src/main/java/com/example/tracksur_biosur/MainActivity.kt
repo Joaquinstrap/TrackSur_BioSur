@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -18,6 +19,8 @@ import com.example.tracksur_biosur.ui.screens.HistoryScreen
 import com.example.tracksur_biosur.ui.screens.RegistryScreen
 import com.example.tracksur_biosur.ui.theme.TrackSur_BioSurTheme
 import com.example.tracksur_biosur.ui.viewmodel.ReportViewModel
+import com.example.tracksur_biosur.ui.screens.ReportDetailScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +53,9 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onNavigateToHistory = {
                                     navController.navigate(Screen.History.route)
+                                },
+                                onNavigateToDetail = {
+                                    navController.navigate(Screen.ReportDetail.route)
                                 }
                             )
                         }
@@ -73,6 +79,21 @@ class MainActivity : ComponentActivity() {
                                 }
                             )
                         }
+
+                        composable(Screen.ReportDetail.route) {
+                            val selectedReport = viewModel.uiState.collectAsState().value.selectedReportForDetail
+                            selectedReport?.let {report ->
+                                ReportDetailScreen(
+                                    report = report,
+                                    onNavigateBack = {
+                                        navController.popBackStack()
+                                    }
+                                )
+                            }
+                        }
+
+
+
                     }
                 }
             }

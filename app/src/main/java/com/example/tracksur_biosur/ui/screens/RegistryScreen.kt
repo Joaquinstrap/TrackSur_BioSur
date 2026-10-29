@@ -31,7 +31,8 @@ import java.util.*
 fun RegistryScreen(
     viewModel: ReportViewModel,
     onNavigateToCreate: () -> Unit,
-    onNavigateToHistory: () -> Unit
+    onNavigateToHistory: () -> Unit,
+    onNavigateToDetail:() -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -159,8 +160,8 @@ fun RegistryScreen(
                                     report = report,
                                     isDraft = false,
                                     onClick = {
-                                        viewModel.loadDraftForEdit(report)
-                                        onNavigateToCreate()
+                                        viewModel.selectReportForDetail(report)
+                                        onNavigateToDetail()
                                     },
                                     onDeleteClick = {reportToDelete = report}
                                 )

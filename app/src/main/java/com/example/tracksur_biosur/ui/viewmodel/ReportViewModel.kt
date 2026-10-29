@@ -154,4 +154,11 @@ class ReportViewModel(
         }
     }
 
+
+    // Asigna o limpia el reporte a visualizar en la pantalla de detalle
+    fun selectReportForDetail(report: FieldReport?) {
+        _uiState.update { it.copy(selectedReportForDetail = report) }
+    }
+
+
 }

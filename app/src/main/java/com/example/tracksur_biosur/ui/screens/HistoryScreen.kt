@@ -30,6 +30,13 @@ fun HistoryScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
+    //Desde este punto hare que se puedan filtrar los antecedentes
+    //Para que no se vean los borradores en el historial
+    val submitteReports = remember(uiState.reports){
+        uiState.reports.filter{!it.isDraft}
+    }
+
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -75,7 +82,7 @@ fun HistoryScreen(
         ) {
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
-            if (uiState.reports.isEmpty()) {
+            if (submitteReports.isEmpty()) {
                 item {
                     Text(
                         text = "No hay registros en el historial.",
@@ -85,7 +92,7 @@ fun HistoryScreen(
                     )
                 }
             } else {
-                items(uiState.reports) { report ->
+                items(submitteReports) { report ->
                     HistoryItemCard(report = report)
                 }
             }
