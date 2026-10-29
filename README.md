@@ -99,7 +99,3 @@ com.example.tracksur_biosur/
 
 ---
 
-## 📌 Planificación del Proyecto
-
-La organización y distribución de tareas de este encargo se gestionaron a través de **Trello**:
-* 🔗 [Enlace al Tablero de Trello del Equipo](https://trello.com) *(Reemplazar con la URL pública de su tablero)*
