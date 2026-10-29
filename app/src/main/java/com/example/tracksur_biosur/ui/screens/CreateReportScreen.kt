@@ -104,9 +104,12 @@ fun CreateReportScreen(
     val categories = listOf(
         "Mantención / Entrega y/o retiro  de Baños Químicos",
         "Mantención en plantas elevadoras",
-        "Tratamiento de Aguas Servidas",
+        "Tratamiento de aguas servidas",
         "Inspecciónes de ductos",
-        "Otro"
+        "Toma de muestras y monitoreo fosas",
+        "Mantenimiento preventivo general",
+        "Otros servicios especiales de terreno"
+
     )
 
     // Comprueba si el usuario ha escrito algo antes de salir
@@ -233,7 +236,7 @@ fun CreateReportScreen(
                     onExpandedChange = { isCategoryDropdownExpanded = !isCategoryDropdownExpanded }
                 ) {
                     OutlinedTextField(
-                        value = uiState.category.ifBlank { "Seleccione una categoría..." },
+                        value = uiState.category.ifBlank { "Seleccione Servicio..." },
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isCategoryDropdownExpanded) },
@@ -252,11 +255,11 @@ fun CreateReportScreen(
                         expanded = isCategoryDropdownExpanded,
                         onDismissRequest = { isCategoryDropdownExpanded = false }
                     ) {
-                        categories.forEach { category ->
+                        categories.forEach { service ->
                             DropdownMenuItem(
-                                text = { Text(category) },
+                                text = { Text(service) },
                                 onClick = {
-                                    viewModel.onCategoryChanged(category)
+                                    viewModel.onCategoryChanged(service)
                                     isCategoryDropdownExpanded = false
                                 }
                             )
@@ -414,7 +417,7 @@ fun CreateReportScreen(
                         onNavigateBack()
                     }
                 ) {
-                    Text("Sí, salir", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text("Sí, salir", color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

@@ -18,9 +18,19 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
+//Esta etiqueta es como dar mi consentimiento de que estoy usando componentes
+//Que actualmente estan en posibilidad de cambiar en futuras versiones
+//En este caso las funciones son TopAppBar o ExposedDropdownMenuBox
+
+
+
 //Que un archivo tenga el composable hace referencia a que forma parte
 //De Jetpack Compose
 @Composable
+//Esta anotacion le indica al compilador
+//Que la aplicacion su objetivo es dibujar cosas en pantalla
+//No realizar el calculo o obtenciond e cualquier valor
+
 
 fun ReportDetailScreen(
     report: FieldReport,
@@ -38,7 +48,7 @@ fun ReportDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Detalle de Antecedente",
+                        text = "Detalle de reporte",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
@@ -95,13 +105,13 @@ fun ReportDetailScreen(
                     // Categoría
                     Column {
                         Text(
-                            text = "Categoría",
+                            text = "Carpeta de Servicio",
                             fontSize = 12.sp,
                             color = Color.Gray,
                             fontWeight = FontWeight.SemiBold
                         )
                         Text(
-                            text = report.categoria.ifBlank { "Sin Asunto" },
+                            text = report.categoria.ifBlank { "Servicio sin especificar" },
                             fontSize = 16.sp,
                             color = Color.Black,
                             fontWeight = FontWeight.Bold

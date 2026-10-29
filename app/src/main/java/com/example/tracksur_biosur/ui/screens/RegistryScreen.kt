@@ -110,7 +110,7 @@ fun RegistryScreen(
             // Sección 1: Borradores
             item {
                 SectionHeader(
-                    title = "Borradores (${drafts.size})",
+                    title = "Carperta de registro (${drafts.size})",
                     isExpanded = isDraftsExpanded,
                     onToggle = { isDraftsExpanded = !isDraftsExpanded },
                     headerColor = Color(0xFFFFF3E0)
@@ -142,7 +142,7 @@ fun RegistryScreen(
             // Sección 2: Antecedentes Entregados
             item {
                 SectionHeader(
-                    title = "Antecedentes entregados (${submitted.size})",
+                    title = "Registros Entregados (${submitted.size})",
                     isExpanded = isSubmittedExpanded,
                     onToggle = { isSubmittedExpanded = !isSubmittedExpanded },
                     headerColor = Color(0xFFE8F5E9)
@@ -179,7 +179,7 @@ fun RegistryScreen(
             onDismissRequest = { reportToDelete = null },
             title = { Text("¿Eliminar registro?",color = Color.Black,
                 fontWeight = FontWeight.Bold) },
-            text = { Text("¿Deseas eliminar permanentemente \"${report.categoria.ifBlank { "Sin Asunto" }}\"?",
+            text = { Text("¿Deseas eliminar permanentemente \"${report.categoria.ifBlank { "Sin Asunto" }}\"?", color = Color.Black,
                 ) },
             confirmButton = {
                 TextButton(
@@ -188,7 +188,7 @@ fun RegistryScreen(
                         reportToDelete = null
                     }
                 ) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                    Text("Eliminar", color = Color.Red, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
